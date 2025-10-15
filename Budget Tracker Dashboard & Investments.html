@@ -1,0 +1,768 @@
+<!-- 
+    Single-File Budget Tracker Web App Prototype
+    Includes HTML structure, Tailwind CSS for styling, and JavaScript for
+    frontend logic, API communication, and view management.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Finance Tracker</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Configure Tailwind for custom colors and Inter font -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#4F46E5',
+                        'secondary': '#10B981',
+                        'danger': '#EF4444',
+                        'card': '#FFFFFF',
+                        'bg-light': '#F9FAFB',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom scrollbar for better aesthetics */
+        body::-webkit-scrollbar {
+            width: 8px;
+        }
+        body::-webkit-scrollbar-thumb {
+            background-color: #9CA3AF;
+            border-radius: 4px;
+        }
+        /* Style for the active tab indicator */
+        .tab-button.active {
+            border-bottom: 2px solid #4F46E5;
+            color: #4F46E5;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="bg-bg-light min-h-screen font-sans antialiased">
+
+    <!-- Main Container -->
+    <div id="app" class="flex flex-col items-center justify-center min-h-screen py-4 sm:py-8">
+
+        <!-- Header -->
+        <header class="w-full max-w-4xl px-4 py-4 bg-white shadow-md rounded-b-xl mb-4">
+            <div class="flex justify-between items-center">
+                <h1 class="text-3xl font-bold text-primary">BudgetPilot 🚀</h1>
+                <div id="auth-info" class="flex items-center space-x-2">
+                    <!-- Dynamic auth buttons appear here -->
+                </div>
+            </div>
+        </header>
+
+        <!-- Auth View -->
+        <div id="auth-view" class="w-full max-w-sm px-6 py-8 bg-white rounded-xl shadow-lg transition-all duration-300 hidden">
+            <h2 id="auth-title" class="text-2xl font-semibold text-gray-800 mb-6 text-center">Login</h2>
+            <form id="auth-form" onsubmit="handleAuthSubmit(event)" class="space-y-4">
+                <div>
+                    <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
+                    <input type="email" id="auth-email" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-primary focus:border-primary">
+                </div>
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+                    <input type="password" id="auth-password" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-primary focus:border-primary">
+                </div>
+                <div id="auth-message" class="text-sm font-medium text-danger"></div>
+                <button type="submit" id="auth-submit-btn" class="w-full py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150">
+                    Sign In
+                </button>
+            </form>
+            <p class="mt-4 text-center text-sm text-gray-600">
+                <span id="auth-toggle-text">Don't have an account?</span>
+                <button onclick="toggleAuthMode()" class="font-medium text-primary hover:text-indigo-500 transition duration-150 ml-1">
+                    Register
+                </button>
+            </p>
+        </div>
+
+        <!-- Dashboard View -->
+        <div id="dashboard-view" class="w-full max-w-4xl px-4 transition-all duration-300 hidden">
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                
+                <!-- Main Balance Card -->
+                <div class="bg-primary text-white p-6 rounded-xl shadow-md mb-6">
+                    <h2 class="text-xl font-medium mb-1">Total Available Balance</h2>
+                    <p id="total-balance" class="text-5xl font-extrabold tracking-tight">$0.00</p>
+                    <p id="auth-status" class="text-sm mt-2 opacity-80">Loading...</p>
+                </div>
+
+                <!-- Tabs Navigation -->
+                <div class="flex border-b border-gray-200 mb-6">
+                    <button class="tab-button px-4 py-2 text-sm transition duration-150 active" data-tab="tracking" onclick="showTab('tracking')">Tracking</button>
+                    <button class="tab-button px-4 py-2 text-sm transition duration-150" data-tab="budget" onclick="showTab('budget')">Budget</button>
+                    <button class="tab-button px-4 py-2 text-sm transition duration-150" data-tab="investment" onclick="showTab('investment')">Investment</button>
+                    <button class="tab-button px-4 py-2 text-sm transition duration-150" data-tab="create-fund" onclick="showTab('create-fund')">Create Fund</button>
+                </div>
+
+                <!-- Tab Content Area -->
+                <div id="tab-content">
+                    
+                    <!-- 1. Tracking Tab (Record Transaction) -->
+                    <div id="tab-tracking" class="tab-pane">
+                        <h3 class="text-2xl font-semibold text-gray-800 mb-4">Record Transaction</h3>
+                        <form id="transaction-form" onsubmit="handleTransactionSubmit(event)" class="space-y-4 p-4 border border-gray-200 rounded-lg">
+                            
+                            <!-- Transaction Type -->
+                            <div class="flex space-x-4">
+                                <label class="flex items-center text-gray-700">
+                                    <input type="radio" name="transaction_type" value="EXPENSE" checked class="form-radio h-4 w-4 text-danger focus:ring-danger">
+                                    <span class="ml-2">Expense</span>
+                                </label>
+                                <label class="flex items-center text-gray-700">
+                                    <input type="radio" name="transaction_type" value="INCOME" class="form-radio h-4 w-4 text-secondary focus:ring-secondary">
+                                    <span class="ml-2">Income</span>
+                                </label>
+                            </div>
+
+                            <!-- Fund Dropdown (Dynamic) -->
+                            <div>
+                                <label for="fund-id" class="block text-sm font-medium text-gray-700">Source/Destination Wallet</label>
+                                <select id="fund-id" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-primary focus:border-primary">
+                                    <option value="">-- Select Wallet --</option>
+                                    <!-- Options populated by fetchUserFunds() -->
+                                </select>
+                            </div>
+
+                            <!-- Amount and Category -->
+                            <div class="flex space-x-4">
+                                <div class="w-1/2">
+                                    <label for="amount" class="block text-sm font-medium text-gray-700">Amount ($)</label>
+                                    <input type="number" id="amount" required min="0.01" step="0.01" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-primary focus:border-primary">
+                                </div>
+                                <div class="w-1/2">
+                                    <label for="category" class="block text-sm font-medium text-gray-700">Category</label>
+                                    <select id="category" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-primary focus:border-primary">
+                                        <option value="Groceries">Groceries</option>
+                                        <option value="Rent">Rent</option>
+                                        <option value="Salary">Salary</option>
+                                        <option value="Investment">Investment</option>
+                                        <option value="Utilities">Utilities</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Date and Description -->
+                            <div class="flex space-x-4">
+                                <div class="w-1/2">
+                                    <label for="date" class="block text-sm font-medium text-gray-700">Date</label>
+                                    <input type="date" id="date" required value="" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-primary focus:border-primary">
+                                </div>
+                                <div class="w-1/2">
+                                    <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
+                                    <input type="text" id="description" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-primary focus:border-primary">
+                                </div>
+                            </div>
+
+                            <button type="submit" class="w-full py-2 px-4 rounded-lg shadow-md text-sm font-medium text-white bg-secondary hover:bg-emerald-600 transition duration-150">
+                                Record Transaction
+                            </button>
+                            <div id="transaction-message" class="text-center text-sm font-medium"></div>
+                        </form>
+                        
+                        <!-- Monthly Summary & Budgeting Advice -->
+                        <div class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Monthly Summary -->
+                            <div class="bg-blue-50 p-4 rounded-xl shadow-inner">
+                                <h4 class="text-lg font-semibold text-gray-700 mb-2">Monthly Summary</h4>
+                                <p class="text-sm">Income: <span id="monthly-income" class="font-bold text-secondary">$0.00</span></p>
+                                <p class="text-sm">Expenses: <span id="monthly-expenses" class="font-bold text-danger">$0.00</span></p>
+                                <p class="text-sm font-medium mt-2">Net: <span id="monthly-net" class="font-extrabold text-primary">$0.00</span></p>
+                            </div>
+                            <!-- Budgeting Advice -->
+                            <div class="bg-yellow-50 p-4 rounded-xl shadow-inner">
+                                <h4 class="text-lg font-semibold text-gray-700 mb-2">Budgeting Advice</h4>
+                                <ul id="budget-advice-list" class="list-disc list-inside text-sm text-gray-600 space-y-1">
+                                    <li>Loading personalized insights...</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                    </div>
+                    
+                    <!-- 2. Budget Tab (Set Budget) -->
+                    <div id="tab-budget" class="tab-pane hidden">
+                        <h3 class="text-2xl font-semibold text-gray-800 mb-4">Set Monthly Budget</h3>
+                        <form id="budget-form" onsubmit="handleBudgetSubmit(event)" class="space-y-4 p-4 border border-gray-200 rounded-lg">
+                            
+                            <!-- Category and Month -->
+                            <div class="flex space-x-4">
+                                <div class="w-1/2">
+                                    <label for="budget-category" class="block text-sm font-medium text-gray-700">Category</label>
+                                    <select id="budget-category" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-primary focus:border-primary">
+                                        <option value="Groceries">Groceries</option>
+                                        <option value="Rent">Rent</option>
+                                        <option value="Utilities">Utilities</option>
+                                        <option value="Entertainment">Entertainment</option>
+                                        <option value="Savings">Savings</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                <div class="w-1/2">
+                                    <label for="budget-month" class="block text-sm font-medium text-gray-700">Month</label>
+                                    <input type="month" id="budget-month" required value="" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-primary focus:border-primary">
+                                </div>
+                            </div>
+
+                            <!-- Allocated Amount -->
+                            <div>
+                                <label for="allocated-amount" class="block text-sm font-medium text-gray-700">Allocated Amount ($)</label>
+                                <input type="number" id="allocated-amount" required min="0" step="0.01" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-primary focus:border-primary">
+                            </div>
+
+                            <button type="submit" class="w-full py-2 px-4 rounded-lg shadow-md text-sm font-medium text-white bg-primary hover:bg-indigo-700 transition duration-150">
+                                Set Budget
+                            </button>
+                            <div id="budget-message" class="text-center text-sm font-medium"></div>
+                        </form>
+                        
+                        <!-- Budget Overview -->
+                        <h4 class="text-xl font-semibold text-gray-800 mt-8 mb-4">Budget Progress</h4>
+                        <div id="budget-summary-container" class="space-y-3">
+                            <p class="text-gray-500">No budget data available for this month.</p>
+                            <!-- Budget items will be dynamically inserted here -->
+                        </div>
+                    </div>
+
+                    <!-- 3. Investment Tab (Choose Investment) -->
+                    <div id="tab-investment" class="tab-pane hidden">
+                        <h3 class="text-2xl font-semibold text-gray-800 mb-4">Choose Your Investment</h3>
+                        <form id="investment-form" onsubmit="handleInvestmentChoice(event)" class="space-y-4 p-4 border border-gray-200 rounded-lg">
+                            
+                            <!-- Investment Type Dropdown (Dynamic) -->
+                            <div>
+                                <label for="investment-type-id" class="block text-sm font-medium text-gray-700">Investment Type</label>
+                                <select id="investment-type-id" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-primary focus:border-primary">
+                                    <option value="">-- Select Product (Loading...) --</option>
+                                    <!-- Options populated by fetchInvestmentTypes() -->
+                                </select>
+                            </div>
+                            
+                            <!-- Source Fund Dropdown (Dynamic) -->
+                            <div>
+                                <label for="source-fund-id" class="block text-sm font-medium text-gray-700">Source Wallet for Funds</label>
+                                <select id="source-fund-id" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-primary focus:border-primary">
+                                    <option value="">-- Select Wallet --</option>
+                                    <!-- Options populated by fetchUserFunds() -->
+                                </select>
+                            </div>
+
+                            <!-- Allocated Fund Amount -->
+                            <div>
+                                <label for="investment-amount" class="block text-sm font-medium text-gray-700">Amount to Allocate ($)</label>
+                                <input type="number" id="investment-amount" required min="1" step="0.01" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-primary focus:border-primary">
+                            </div>
+
+                            <button type="submit" class="w-full py-2 px-4 rounded-lg shadow-md text-sm font-medium text-white bg-primary hover:bg-indigo-700 transition duration-150">
+                                Commit to Investment
+                            </button>
+                            <div id="investment-message" class="text-center text-sm font-medium"></div>
+                        </form>
+
+                        <!-- Investment Portfolio Status (Mock) -->
+                        <h4 class="text-xl font-semibold text-gray-800 mt-8 mb-4">Your Portfolio</h4>
+                        <div class="space-y-3 p-4 border border-gray-200 rounded-lg">
+                            <p class="text-gray-600">This area will eventually display your invested funds and performance data from your MySQL database.</p>
+                            <p class="text-sm text-gray-500">E.g., MMF: $1,500 (+3.5%), Stocks: $500 (-1.2%)</p>
+                        </div>
+                    </div>
+
+                    <!-- 4. Create Fund Tab -->
+                    <div id="tab-create-fund" class="tab-pane hidden">
+                        <h3 class="text-2xl font-semibold text-gray-800 mb-4">Create New Wallet/Fund</h3>
+                        <form id="create-fund-form" onsubmit="handleCreateFund(event)" class="space-y-4 p-4 border border-gray-200 rounded-lg">
+                            
+                            <div>
+                                <label for="new-fund-name" class="block text-sm font-medium text-gray-700">Wallet Name (e.g., Savings, Crypto, Phone Wallet)</label>
+                                <input type="text" id="new-fund-name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-primary focus:border-primary">
+                            </div>
+
+                            <div>
+                                <label for="new-fund-type" class="block text-sm font-medium text-gray-700">Type</label>
+                                <select id="new-fund-type" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-primary focus:border-primary">
+                                    <option value="Cash">Cash</option>
+                                    <option value="Bank">Bank Account</option>
+                                    <option value="Crypto">Crypto</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label for="initial-balance" class="block text-sm font-medium text-gray-700">Initial Balance ($)</label>
+                                <input type="number" id="initial-balance" required min="0" step="0.01" value="0.00" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-primary focus:border-primary">
+                            </div>
+
+                            <button type="submit" class="w-full py-2 px-4 rounded-lg shadow-md text-sm font-medium text-white bg-secondary hover:bg-emerald-600 transition duration-150">
+                                Create Wallet
+                            </button>
+                            <div id="create-fund-message" class="text-center text-sm font-medium"></div>
+                        </form>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- Notification Modal -->
+        <div id="notification-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
+            <div class="bg-card p-6 rounded-lg shadow-xl max-w-sm w-full space-y-4">
+                <h3 id="modal-title" class="text-xl font-semibold text-gray-800"></h3>
+                <p id="modal-body" class="text-gray-600"></p>
+                <div class="flex justify-end">
+                    <button onclick="closeModal()" class="py-2 px-4 bg-primary text-white rounded-lg hover:bg-indigo-700 transition duration-150">Close</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // Global State
+        let authToken = localStorage.getItem('authToken');
+        let currentUserId = localStorage.getItem('currentUserId');
+        let authMode = 'login'; // 'login' or 'register'
+        let userFunds = []; // Store fund data globally for dropdown population
+
+        // API Configuration (No API Key needed for server-to-server calls)
+        const API_BASE = '/api';
+
+        // --- Utility Functions (Modal, Fetch) ---
+
+        function openModal(title, body, isError = false) {
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-body').textContent = body;
+            document.getElementById('modal-title').className = isError ? 'text-xl font-semibold text-danger' : 'text-xl font-semibold text-secondary';
+            document.getElementById('notification-modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('notification-modal').classList.add('hidden');
+        }
+        
+        /**
+         * Generic fetch wrapper with auth header.
+         * @param {string} url 
+         * @param {object} options 
+         * @param {boolean} requireAuth 
+         */
+        async function apiFetch(url, options = {}, requireAuth = true) {
+            const headers = {
+                'Content-Type': 'application/json',
+                ...options.headers
+            };
+
+            if (requireAuth && authToken) {
+                headers['Authorization'] = `Bearer ${authToken}`;
+            }
+
+            // Exponential backoff logic
+            for (let attempt = 0; attempt < 3; attempt++) {
+                try {
+                    const response = await fetch(url, { ...options, headers });
+                    
+                    if (response.status === 401) {
+                        handleLogout(); // Force logout on auth failure
+                        throw new Error('Authentication failed. Logging out.');
+                    }
+
+                    if (!response.ok) {
+                        const errorBody = await response.json();
+                        throw new Error(errorBody.message || `HTTP error! Status: ${response.status}`);
+                    }
+                    
+                    return response.json();
+                } catch (error) {
+                    if (attempt === 2) throw error; 
+                    // Wait 2^attempt * 1000 ms before retrying (1s, 2s)
+                    await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+                }
+            }
+        }
+
+
+        // --- Authentication & UI Setup ---
+
+        function updateUI() {
+            const authView = document.getElementById('auth-view');
+            const dashboardView = document.getElementById('dashboard-view');
+            const authInfo = document.getElementById('auth-info');
+
+            authInfo.innerHTML = '';
+            
+            if (authToken) {
+                // Logged in
+                authView.classList.add('hidden');
+                dashboardView.classList.remove('hidden');
+                authInfo.innerHTML = `
+                    <span class="text-sm font-medium text-gray-600 hidden sm:inline">User: ${currentUserId.substring(0, 8)}...</span>
+                    <button onclick="handleLogout()" class="py-1 px-3 text-sm rounded-lg text-white bg-danger hover:bg-red-600 transition duration-150">
+                        Logout
+                    </button>
+                `;
+                // Load dashboard data only after login
+                loadDashboardData();
+                fetchUserFunds();
+                fetchInvestmentTypes();
+            } else {
+                // Logged out
+                dashboardView.classList.add('hidden');
+                authView.classList.remove('hidden');
+                authInfo.innerHTML = `
+                    <button onclick="toggleAuthMode('login')" class="py-1 px-3 text-sm rounded-lg text-white bg-primary hover:bg-indigo-700 transition duration-150">
+                        Login
+                    </button>
+                `;
+            }
+        }
+
+        function toggleAuthMode(mode = null) {
+            authMode = mode || (authMode === 'login' ? 'register' : 'login');
+            
+            const title = document.getElementById('auth-title');
+            const toggleText = document.getElementById('auth-toggle-text');
+            const submitBtn = document.getElementById('auth-submit-btn');
+
+            if (authMode === 'register') {
+                title.textContent = 'Register';
+                toggleText.textContent = 'Already have an account?';
+                submitBtn.textContent = 'Sign Up';
+            } else {
+                title.textContent = 'Login';
+                toggleText.textContent = "Don't have an account?";
+                submitBtn.textContent = 'Sign In';
+            }
+            document.getElementById('auth-message').textContent = '';
+        }
+
+        async function handleAuthSubmit(event) {
+            event.preventDefault();
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-password').value;
+            const messageElement = document.getElementById('auth-message');
+            messageElement.textContent = 'Processing...';
+
+            const endpoint = authMode === 'login' ? '/auth/login' : '/auth/register';
+            
+            try {
+                const data = await apiFetch(`${API_BASE}${endpoint}`, {
+                    method: 'POST',
+                    body: JSON.stringify({ email, password })
+                }, false); // Do not require auth token for login/register
+
+                authToken = data.token;
+                currentUserId = data.userId;
+                localStorage.setItem('authToken', authToken);
+                localStorage.setItem('currentUserId', currentUserId);
+                messageElement.textContent = authMode === 'login' ? 'Login successful!' : 'Registration successful! Proceeding to login...';
+                
+                updateUI();
+            } catch (error) {
+                messageElement.textContent = `Error: ${error.message}`;
+                authToken = null;
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('currentUserId');
+                updateUI(); // Ensure UI reflects logged-out state on error
+            }
+        }
+
+        function handleLogout() {
+            authToken = null;
+            currentUserId = null;
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('currentUserId');
+            userFunds = []; // Clear funds on logout
+            updateUI();
+            showTab('tracking'); // Reset to tracking view
+            openModal('Goodbye!', 'You have been successfully logged out.', false);
+        }
+        
+        // --- Dashboard Data Loading ---
+        
+        async function fetchUserFunds() {
+            try {
+                const data = await apiFetch(`${API_BASE}/funds/wallets`, { method: 'GET' });
+                userFunds = data; // Store globally
+                
+                // Populate Transaction Form Dropdown
+                const fundDropdown = document.getElementById('fund-id');
+                const fundDropdownInvestment = document.getElementById('source-fund-id');
+                fundDropdown.innerHTML = '<option value="">-- Select Wallet --</option>';
+                fundDropdownInvestment.innerHTML = '<option value="">-- Select Wallet --</option>';
+
+                userFunds.forEach(fund => {
+                    const option = document.createElement('option');
+                    option.value = fund.fund_id;
+                    option.textContent = `${fund.fund_name} (${fund.fund_type}) - $${fund.current_balance.toFixed(2)}`;
+                    fundDropdown.appendChild(option);
+                    
+                    const optionInv = option.cloneNode(true);
+                    fundDropdownInvestment.appendChild(optionInv);
+                });
+            } catch (error) {
+                console.error('Failed to fetch user funds:', error);
+                // openModal('Fund Error', 'Could not load your wallets. Try logging in again.', true);
+            }
+        }
+        
+        async function fetchInvestmentTypes() {
+            try {
+                const data = await apiFetch(`${API_BASE}/investment/types`, { method: 'GET' });
+                const investmentDropdown = document.getElementById('investment-type-id');
+                
+                investmentDropdown.innerHTML = '<option value="">-- Select Product --</option>';
+                data.forEach(type => {
+                    const option = document.createElement('option');
+                    option.value = type.type_id;
+                    option.textContent = `${type.name} (Risk: ${type.risk_level})`;
+                    investmentDropdown.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Failed to fetch investment types:', error);
+            }
+        }
+        
+        async function loadDashboardData() {
+            document.getElementById('auth-status').textContent = `User ID: ${currentUserId.substring(0, 8)}...`;
+            
+            try {
+                // 1. Fetch main dashboard data
+                const dashboardData = await apiFetch(`${API_BASE}/dashboard`, { method: 'GET' });
+                
+                // Update Total Balance
+                document.getElementById('total-balance').textContent = `$${dashboardData.total_balance.toFixed(2)}`;
+
+                // Update Monthly Summary
+                document.getElementById('monthly-income').textContent = `$${dashboardData.monthly_summary.monthly_income.toFixed(2)}`;
+                document.getElementById('monthly-expenses').textContent = `$${dashboardData.monthly_summary.monthly_expenses.toFixed(2)}`;
+                const net = dashboardData.monthly_summary.monthly_income - dashboardData.monthly_summary.monthly_expenses;
+                document.getElementById('monthly-net').textContent = `$${net.toFixed(2)}`;
+                document.getElementById('monthly-net').classList.toggle('text-danger', net < 0);
+                document.getElementById('monthly-net').classList.toggle('text-secondary', net >= 0);
+
+                // Update Budgeting Advice
+                const adviceList = document.getElementById('budget-advice-list');
+                adviceList.innerHTML = '';
+                dashboardData.budgeting_advice.forEach(advice => {
+                    const li = document.createElement('li');
+                    li.innerHTML = advice.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                    adviceList.appendChild(li);
+                });
+
+                // Update Budget Summary
+                const budgetContainer = document.getElementById('budget-summary-container');
+                budgetContainer.innerHTML = '';
+                if (dashboardData.budget_summary.length === 0) {
+                     budgetContainer.innerHTML = '<p class="text-gray-500">No budget data available for this month.</p>';
+                } else {
+                    dashboardData.budget_summary.forEach(item => {
+                        const remaining = item.allocated - item.spent;
+                        const progress = (item.spent / item.allocated) * 100;
+                        const color = remaining < 0 ? 'bg-danger' : (progress > 80 ? 'bg-yellow-500' : 'bg-secondary');
+                        const statusText = remaining < 0 ? 'OVER BUDGET' : `${remaining.toFixed(2)} remaining`;
+
+                        const budgetItem = `
+                            <div class="p-3 bg-white rounded-lg shadow-sm border border-gray-100">
+                                <div class="flex justify-between items-center mb-1">
+                                    <span class="font-medium text-gray-800">${item.category}</span>
+                                    <span class="text-sm font-bold ${remaining < 0 ? 'text-danger' : 'text-secondary'}">${statusText}</span>
+                                </div>
+                                <div class="text-xs text-gray-500 mb-1">
+                                    Spent: $${item.spent.toFixed(2)} / Allocated: $${item.allocated.toFixed(2)}
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2.5">
+                                    <div class="${color} h-2.5 rounded-full" style="width: ${Math.min(100, progress)}%"></div>
+                                </div>
+                            </div>
+                        `;
+                        budgetContainer.insertAdjacentHTML('beforeend', budgetItem);
+                    });
+                }
+
+
+            } catch (error) {
+                console.error('Failed to load dashboard data:', error);
+                // openModal('Dashboard Error', 'Could not load dashboard data. Check server connection.', true);
+            }
+        }
+
+        // --- Form Handlers ---
+        
+        async function handleCreateFund(event) {
+            event.preventDefault();
+            const fundName = document.getElementById('new-fund-name').value;
+            const fundType = document.getElementById('new-fund-type').value;
+            const initialBalance = document.getElementById('initial-balance').value;
+            const messageElement = document.getElementById('create-fund-message');
+            messageElement.textContent = 'Creating...';
+
+            try {
+                const data = await apiFetch(`${API_BASE}/funds/create`, {
+                    method: 'POST',
+                    body: JSON.stringify({ 
+                        fund_name: fundName, 
+                        fund_type: fundType, 
+                        initial_balance: initialBalance 
+                    })
+                });
+
+                messageElement.textContent = data.message;
+                messageElement.className = 'text-center text-sm font-medium text-secondary';
+                document.getElementById('create-fund-form').reset();
+                fetchUserFunds(); // Refresh fund dropdowns
+                loadDashboardData(); // Refresh balance
+            } catch (error) {
+                messageElement.textContent = `Error: ${error.message}`;
+                messageElement.className = 'text-center text-sm font-medium text-danger';
+            }
+        }
+        
+        async function handleTransactionSubmit(event) {
+            event.preventDefault();
+            const form = event.target;
+            const type = form.querySelector('input[name="transaction_type"]:checked').value;
+            const fundId = document.getElementById('fund-id').value;
+            const amount = document.getElementById('amount').value;
+            const category = document.getElementById('category').value;
+            const date = document.getElementById('date').value;
+            const description = document.getElementById('description').value;
+            const messageElement = document.getElementById('transaction-message');
+            messageElement.textContent = 'Recording...';
+
+            if (!fundId) {
+                messageElement.textContent = 'Please select a wallet.';
+                messageElement.className = 'text-center text-sm font-medium text-danger';
+                return;
+            }
+
+            try {
+                const data = await apiFetch(`${API_BASE}/funds/transaction`, {
+                    method: 'POST',
+                    body: JSON.stringify({ 
+                        fund_id: parseInt(fundId), 
+                        type: type, 
+                        amount: amount, 
+                        category: category, 
+                        date: date, 
+                        description: description 
+                    })
+                });
+
+                messageElement.textContent = data.message;
+                messageElement.className = 'text-center text-sm font-medium text-secondary';
+                form.reset();
+                // Set today's date back in the field
+                document.getElementById('date').value = new Date().toISOString().split('T')[0];
+                fetchUserFunds(); // Refresh fund balance display
+                loadDashboardData(); // Refresh summary and balance
+            } catch (error) {
+                messageElement.textContent = `Error: ${error.message}`;
+                messageElement.className = 'text-center text-sm font-medium text-danger';
+            }
+        }
+        
+        async function handleBudgetSubmit(event) {
+            event.preventDefault();
+            const category = document.getElementById('budget-category').value;
+            const month = document.getElementById('budget-month').value;
+            const allocatedAmount = document.getElementById('allocated-amount').value;
+            const messageElement = document.getElementById('budget-message');
+            messageElement.textContent = 'Setting Budget...';
+
+            try {
+                const data = await apiFetch(`${API_BASE}/funds/budget`, {
+                    method: 'POST',
+                    body: JSON.stringify({ 
+                        category: category, 
+                        month: `${month}-01`, // Backend expects a full date for Budgets
+                        allocated_amount: allocatedAmount
+                    })
+                });
+
+                messageElement.textContent = data.message;
+                messageElement.className = 'text-center text-sm font-medium text-secondary';
+                document.getElementById('budget-form').reset();
+                loadDashboardData(); // Refresh budget summary
+            } catch (error) {
+                messageElement.textContent = `Error: ${error.message}`;
+                messageElement.className = 'text-center text-sm font-medium text-danger';
+            }
+        }
+        
+        async function handleInvestmentChoice(event) {
+            event.preventDefault();
+            const typeId = document.getElementById('investment-type-id').value;
+            const amount = document.getElementById('investment-amount').value;
+            const fundId = document.getElementById('source-fund-id').value; // NEW!
+            const messageElement = document.getElementById('investment-message');
+            messageElement.textContent = 'Recording Investment...';
+
+            if (!fundId) {
+                messageElement.textContent = 'Please select the source wallet for the investment.';
+                messageElement.className = 'text-center text-sm font-medium text-danger';
+                return;
+            }
+
+            try {
+                const data = await apiFetch(`${API_BASE}/investment/choose`, {
+                    method: 'POST',
+                    body: JSON.stringify({ 
+                        type_id: parseInt(typeId), 
+                        allocated_fund: amount,
+                        fund_id: parseInt(fundId) // Pass the source fund ID
+                    })
+                });
+
+                messageElement.textContent = data.message;
+                messageElement.className = 'text-center text-sm font-medium text-secondary';
+                document.getElementById('investment-form').reset();
+                fetchUserFunds(); // Refresh fund balance display
+                loadDashboardData(); // Refresh advice
+            } catch (error) {
+                messageElement.textContent = `Error: ${error.message}`;
+                messageElement.className = 'text-center text-sm font-medium text-danger';
+            }
+        }
+
+        // --- Tab Management ---
+
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-pane').forEach(pane => {
+                pane.classList.add('hidden');
+            });
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('active');
+            });
+
+            document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+            document.querySelector(`.tab-button[data-tab="${tabName}"]`).classList.add('active');
+        }
+
+        // Initialization on load
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set today's date on transaction form
+            document.getElementById('date').value = new Date().toISOString().split('T')[0];
+            
+            // Set current month on budget form
+            const today = new Date();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const year = today.getFullYear();
+            document.getElementById('budget-month').value = `${year}-${month}`;
+
+            updateUI(); // Check authentication status and render the correct view
+        });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,5 @@
+.gitignore
+1. Dependency Directory/node_modules
+2. Environment Variables & Secrets.env*.log
+3. Database Secrets (Optional, but good practice if not using .env)*.sql
+4. OS/Editor generated files.DS_Store.vscode/

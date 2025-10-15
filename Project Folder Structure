@@ -1,0 +1,21 @@
+Project Folder Structure
+This structure separates concerns into backend (server, models, routes) and frontend (static files, though we'll combine the main interface into a single HTML file for this project).
+budget-tracker-app/
+├── node_modules/         # Node.js dependencies
+├── .env                  # Environment variables (DB credentials, secrets)
+├── package.json          # Project dependencies and scripts
+├── server.js             # Main application entry point (Express setup)
+├── db/
+│   └── db.js             # MySQL connection pool setup
+├── models/
+│   ├── UserModel.js      # Handles Person/User data and DB interactions
+│   ├── FundsModel.js     # Handles Wallet/Fund data and transactions
+│   └── InvestmentModel.js# Handles Investment data
+├── routes/
+│   ├── AuthRoutes.js     # /api/auth routes (register, login)
+│   ├── FundsRoutes.js    # /api/funds routes (record spend/earn, budget plan)
+│   └── InvestmentRoutes.js# /api/investment routes (choose investment, get insights)
+├── sql/
+│   └── schema.sql        # Database schema definition
+└── public/
+    └── index.html        # Single-file frontend template (Dashboard & Investments)

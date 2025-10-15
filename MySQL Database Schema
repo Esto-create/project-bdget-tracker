@@ -1,0 +1,72 @@
+-- Database: budget_tracker_db
+-- 1. Create the database
+CREATE DATABASE IF NOT EXISTS budget_tracker_db;
+USE budget_tracker_db;
+
+-- 2. Persons Table (Authentication and core user data)
+CREATE TABLE Persons (
+    person_id VARCHAR(36) PRIMARY KEY, -- Using UUID for person ID
+    username VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL, -- Storing hashed password
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 3. Funds/Wallets Table (Different funding sources)
+CREATE TABLE Funds (
+    fund_id INT AUTO_INCREMENT PRIMARY KEY,
+    person_id VARCHAR(36) NOT NULL,
+    wallet_name VARCHAR(100) NOT NULL, -- e.g., 'Crypto Wallet', 'Phone Wallet', 'Bank Account'
+    current_balance DECIMAL(15, 2) DEFAULT 0.00,
+    currency VARCHAR(10) NOT NULL DEFAULT 'USD',
+    FOREIGN KEY (person_id) REFERENCES Persons(person_id) ON DELETE CASCADE,
+    UNIQUE KEY unique_fund_per_person (person_id, wallet_name)
+);
+
+-- 4. Transactions Table (Monthly spend/earning records)
+CREATE TABLE Transactions (
+    transaction_id INT AUTO_INCREMENT PRIMARY KEY,
+    fund_id INT NOT NULL,
+    transaction_type ENUM('INCOME', 'EXPENSE') NOT NULL,
+    amount DECIMAL(10, 2) NOT NULL,
+    category VARCHAR(50), -- e.g., 'Groceries', 'Salary', 'Rent', 'Investment'
+    description VARCHAR(255),
+    transaction_date DATE NOT NULL,
+    FOREIGN KEY (fund_id) REFERENCES Funds(fund_id) ON DELETE CASCADE
+);
+
+-- 5. Budgets Table (Monthly budget plans)
+CREATE TABLE Budgets (
+    budget_id INT AUTO_INCREMENT PRIMARY KEY,
+    person_id VARCHAR(36) NOT NULL,
+    budget_month DATE NOT NULL, -- Stores the 1st day of the month (YYYY-MM-01)
+    category VARCHAR(50) NOT NULL,
+    allocated_amount DECIMAL(10, 2) NOT NULL,
+    FOREIGN KEY (person_id) REFERENCES Persons(person_id) ON DELETE CASCADE,
+    UNIQUE KEY unique_budget_month_category (person_id, budget_month, category)
+);
+
+-- 6. Investment Types Table (Available investments, e.g., 'Stock', 'MMF', 'Real Estate')
+CREATE TABLE InvestmentTypes (
+    type_id INT AUTO_INCREMENT PRIMARY KEY,
+    type_name VARCHAR(100) UNIQUE NOT NULL,
+    risk_level ENUM('LOW', 'MEDIUM', 'HIGH') NOT NULL,
+    description TEXT
+);
+
+-- Insert common investment types
+INSERT INTO InvestmentTypes (type_name, risk_level, description) VALUES
+('Money Market Funds (MMF)', 'LOW', 'Highly liquid, low-risk fund that invests in short-term debt securities.'),
+('Tech Sector Stocks', 'HIGH', 'High-growth, high-volatility investments in technology companies.'),
+('Real Estate Trust (REIT)', 'MEDIUM', 'Investments in income-producing real estate.');
+
+-- 7. PersonInvestments Table (What the person has chosen)
+CREATE TABLE PersonInvestments (
+    investment_id INT AUTO_INCREMENT PRIMARY KEY,
+    person_id VARCHAR(36) NOT NULL,
+    type_id INT NOT NULL,
+    allocated_fund DECIMAL(15, 2) NOT NULL,
+    investment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (person_id) REFERENCES Persons(person_id) ON DELETE CASCADE,
+    FOREIGN KEY (type_id) REFERENCES InvestmentTypes(type_id) ON DELETE RESTRICT
+);

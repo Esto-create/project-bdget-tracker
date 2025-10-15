@@ -1,0 +1,7 @@
+.env file
+Database ConfigurationDB_HOST=localhost
+DB_USER=root 
+DB_PASSWORD=your_mysql_password 
+DB_DATABASE=budget_pilot_db
+JWT Secret (Use a long, random string)
+JWT_SECRET=SUPER_SECRET_KEY_REPLACE_ME_NOW
